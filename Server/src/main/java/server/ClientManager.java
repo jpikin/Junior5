@@ -3,6 +3,7 @@ package server;
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.List;
 
 public class ClientManager implements Runnable {
     private final Socket socket;
@@ -20,16 +21,19 @@ public class ClientManager implements Runnable {
             clients.add(this);
             System.out.println(name + " подключился к чату.");
             broadcastMessage("Server: " + name + " подключился к чату.");
-        }
-        catch (IOException e){
+        } catch (IOException e) {
             closeEverything(socket, bufferedReader, bufferedWriter);
         }
     }
 
-    private void removeClient(){
+    private void removeClient() {
         clients.remove(this);
         System.out.println(name + " покинул чат.");
-        broadcastMessage("Server: " + name + " покинул чат.");
+        try {
+            broadcastMessage("Server: " + name + " покинул чат.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void closeEverything(Socket socket, BufferedReader bufferedReader, BufferedWriter bufferedWriter) {
@@ -44,28 +48,60 @@ public class ClientManager implements Runnable {
             if (socket != null) {
                 socket.close();
             }
-        }
-        catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
 
-    private void broadcastMessage(String message){
-        for(ClientManager client : clients){
-            try {
+    private void broadcastMessage(String message) throws IOException {
+        String[] msgSplit = message.split(" ");
+        String tryName = msgSplit[1];
+        String isServer = msgSplit[0];
+
+        if (isServer.equals("Server:")) {
+            for (ClientManager client : clients) {
                 if (!client.name.equals(name) && message != null) {
                     client.bufferedWriter.write(message);
                     client.bufferedWriter.newLine();
                     client.bufferedWriter.flush();
                 }
             }
-            catch (IOException e){
-                closeEverything(socket, bufferedReader, bufferedWriter);
+        } else {
+            if (!isPrivateMessage(tryName)) {
+                for (ClientManager client : clients) {
+                    if (!client.name.equals(name) && message != null) {
+                        client.bufferedWriter.write(message);
+                        client.bufferedWriter.newLine();
+                        client.bufferedWriter.flush();
+                    }
+                }
+            } else {
+                for (ClientManager client : clients) {
+                    if (client.name.equals(tryName) && message != null) {
+                        client.bufferedWriter.write(message);
+                        client.bufferedWriter.newLine();
+                        client.bufferedWriter.flush();
+                    }
+                }
             }
         }
     }
 
+
+    /*
+     * Выясняем личное ли сообщение отправлено.
+     */
+    private Boolean isPrivateMessage(String msg) throws IOException {
+        Boolean flag = false;
+        for (ClientManager client : clients) {
+            if (client.name.equals(msg)) {
+                flag = true;
+                break;
+            }
+        }
+        return flag;
+    }
 
     @Override
     public void run() {
@@ -76,8 +112,7 @@ public class ClientManager implements Runnable {
                 messageFromClient = bufferedReader.readLine();
 
                 broadcastMessage(messageFromClient);
-            }
-            catch (IOException e){
+            } catch (IOException e) {
                 closeEverything(socket, bufferedReader, bufferedWriter);
 
                 break;

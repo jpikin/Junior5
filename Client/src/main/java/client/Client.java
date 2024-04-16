@@ -59,7 +59,7 @@ public class Client {
                 }
             }
         }).start();
-        System.out.println("Завершение работы клиента");
+//        System.out.println("Завершение работы клиента");
     }
 
     private void closeEverything(Socket socket, BufferedReader bufferedReader, BufferedWriter bufferedWriter) {
@@ -73,6 +73,7 @@ public class Client {
             if (socket != null) {
                 socket.close();
             }
+            System.out.println("Завершение работы клиента");
         }
         catch (IOException e){
             e.printStackTrace();
